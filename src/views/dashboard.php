@@ -1,4 +1,48 @@
 <?php
+function getWorkingDaysInMonth(DateTime $date): int
+{
+    $firstDay = clone $date;
+    $firstDay->modify('first day of this month');
+    $lastDay = clone $date;
+    $lastDay->modify('last day of this month');
+    
+    $workingDays = 0;
+    $current = clone $firstDay;
+    
+    while ($current <= $lastDay) {
+        $dayOfWeek = (int)$current->format('w');
+        if ($dayOfWeek != 0 && $dayOfWeek != 6) {
+            $workingDays++;
+        }
+        $current->modify('+1 day');
+    }
+    
+    return $workingDays;
+}
+
+function getCurrentWorkingDay(DateTime $date): int
+{
+    $firstDay = clone $date;
+    $firstDay->modify('first day of this month');
+    
+    $workingDays = 0;
+    $current = clone $firstDay;
+    
+    while ($current <= $date) {
+        $dayOfWeek = (int)$current->format('w');
+        if ($dayOfWeek != 0 && $dayOfWeek != 6) {
+            $workingDays++;
+        }
+        $current->modify('+1 day');
+    }
+    
+    return $workingDays;
+}
+
+$now = new DateTime();
+$currentWorkingDay = getCurrentWorkingDay($now);
+$totalWorkingDays = getWorkingDaysInMonth($now);
+
 $openOrders    = $summary['open_orders']      ?? 0;
 $invoicedToday = $summary['invoiced_today']   ?? 0;
 $monthToDate   = $summary['month_to_date']    ?? 0;
@@ -64,8 +108,11 @@ $targetPct = $currentTarget > 0 ? min(100, ($monthToDate / $currentTarget) * 100
 <!-- MTD performance + chart -->
 <div class="grid grid-cols-1 xl:grid-cols-5 gap-4">
     <div class="xl:col-span-2 bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100">
-        <div class="bg-brand text-white px-6 py-3 text-sm font-semibold">
-            Month to Date Performance
+        <div class="bg-brand text-white px-6 py-3">
+            <div class="flex items-center justify-between">
+                <span class="text-sm font-semibold">Month to Date Performance</span>
+                <span class="text-xs font-medium opacity-90">Day <?= $currentWorkingDay ?> of <?= $totalWorkingDays ?> working days</span>
+            </div>
         </div>
         <div class="p-6 space-y-6">
             <div>
