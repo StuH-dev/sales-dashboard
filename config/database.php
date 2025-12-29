@@ -33,21 +33,40 @@ class Database
     public static function connection(): PDO
     {
         if (self::$conn === null) {
-            $server   = getenv('DB_SERVER') ?: 'tcp:localhost,1433';
-            $database = getenv('DB_DATABASE') ?: '';
-            $username = getenv('DB_USERNAME') ?: '';
-            $password = getenv('DB_PASSWORD') ?: '';
+            $server   = getenv('DB_SERVER') ?: 'localhost\SQLEXPRESS';
+            $database = getenv('DB_DATABASE') ?: 'sales-dashboard';
+            $username = getenv('DB_USERNAME') ?: 'sa';
+            $password = getenv('DB_PASSWORD') ?: 'Pcare2009';
+            $port     = getenv('DB_PORT') ?: '1433';
+            $trusted  = getenv('DB_TRUSTED_CONNECTION') ?: 'false';
 
-            if (empty($database) || empty($username)) {
-                throw new RuntimeException('Database configuration is missing. Please check your .env file.');
+            if (empty($database)) {
+                throw new RuntimeException('Database name is required. Please set DB_DATABASE in your .env file.');
             }
 
-            $dsn = "sqlsrv:Server=$server;Database=$database";
+            if (strtolower($trusted) === 'true' || strtolower($trusted) === 'yes') {
+                $dsn = "sqlsrv:Server=$server,$port;Database=$database;TrustServerCertificate=1";
+                $username = null;
+                $password = null;
+            } else {
+                if (empty($username)) {
+                    throw new RuntimeException('Database username is required. Please set DB_USERNAME in your .env file or use DB_TRUSTED_CONNECTION=true for Windows Authentication.');
+                }
+                $dsn = "sqlsrv:Server=$server,$port;Database=$database;TrustServerCertificate=1";
+            }
 
-            self::$conn = new PDO($dsn, $username, $password, [
-                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            ]);
+            try {
+                self::$conn = new PDO($dsn, $username, $password, [
+                    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_TIMEOUT            => 30,
+                    PDO::SQLSRV_ATTR_QUERY_TIMEOUT => 30,
+                ]);
+
+                self::$conn->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, false);
+            } catch (PDOException $e) {
+                throw new RuntimeException('Failed to connect to SQL Server Express: ' . $e->getMessage(), 0, $e);
+            }
         }
 
         return self::$conn;
